@@ -1,4 +1,63 @@
-#include "main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define MAX_USER 100
+
+void createAdminAcc();
+void signInPage();
+void registration();
+void deleteUser( int id);  // id needed to know if the user is deleting its own or not
+void searchUser();
+
+// Menu
+void startMenu();
+void userMenu( int id);
+void adminMenu( int id);
+
+void doExit();
+void showProfile( int id);
+void logout( int id);
+
+void writeUserToFile();
+// void appendTransacToFile();
+
+bool stringCompare( char [], char []);
+void stringCopy( char [], char []);
+
+bool isStrongPasswd( char []);
+bool isValidEmail( char []);
+
+void ptsProcess( int giveId);
+void ptsGive( int giveId, int receiveId, int pts);
+
+typedef struct{
+    int id;
+    char name[20];
+    char email[41];
+    char password[30];
+    int ASMpts;
+    /* temporary storing the last transaction
+       ( which will be separate structure in the future) */
+    char transacMsg[40];  
+}User;
+
+typedef struct{
+    int from;
+    int to;
+    int amount;
+    char eventTime[30];
+}Transac;
+
+// selective special character set
+char special[] = { '\"', '\'', '~', '`', '@', '#', '$', '%', '^', '&', 
+                    '*', '(', ')', '-', '_', '+', '=', '<', '>', ',', 
+                    '.', '?', '/', '\\', '|', '[', ']', '{', '}'};
+const char * filePath = "../data/db.bin";  // relative file path to binary file
+FILE * fptr;
+User user[100];  // definite user amount
+Transac * transac = NULL;  // initialise indefinite transaction events 
+int onlineUserIDs[MAX_USER];  // to store the id of online user (needs concurrency control)
 
 int main()
 {
@@ -8,16 +67,18 @@ int main()
         perror("Error opening the user database!");
         return 1;
     }
-    size_t readCount = fread( user, sizeof(User), Max_User, fptr);  // accumulate the user number
+    size_t readCount = fread( user, sizeof(User), MAX_USER, fptr);  // accumulate the user number
     fclose(fptr);
 
-    while(1)
+    createAdminAcc();
+
+    while(true)
     {
-        start_menu();
+        startMenu();
     }
 }
 
-void sign_in_page()
+void signInPage()
 {
     char _mailBuffer[50];  // to store mail temporarily during input process
     char _passwdBuffer[30];  // to store password temporarily during input process
@@ -28,7 +89,7 @@ void sign_in_page()
 
     for( int i = 0; user[i].id != 0; i++)
     {
-        if( compare_string( _mailBuffer, user[i].email) == true)
+        if( stringCompare( _mailBuffer, user[i].email) == true)
         {    
             mailExist = true;
             id = i + 1;
@@ -39,26 +100,21 @@ void sign_in_page()
     {
         printf("Enter password : ");
         scanf(" %[^'\n']", &_passwdBuffer);
-        if( compare_string( _passwdBuffer, user[id-1].password) == 1)
+        if( stringCompare( _passwdBuffer, user[id-1].password) == 1)
         {
             int j = 0;
             while( onlineUserIDs[j] != '\0')
                 j++;
             onlineUserIDs[j] = id;  // assign the user id to the online user list
-            app_in_menu(id);
+            if( id >= 1 && id <= 3)
+                adminMenu(id);
+            userMenu(id);  
         }
-        else
-        {
-            printf("Sorry, the password you entered is invalid!\n");
-            start_menu();
-        }
+        printf("Sorry, the password you entered is invalid!\n");
+        startMenu();
     }
-    else
-    {
-        printf("Sorry, the email you entered is not registered!\n");
-        start_menu();
-    }
-
+    printf("Sorry, the email you entered is not registered!\n");
+    startMenu();
 }
 
 void registration()
@@ -67,7 +123,7 @@ void registration()
     char _mailBuffer[50];  // to store mail temporarily during input process
     char _passwuseruffer[30];  // to store password temporarily during input process
     int _asmPtsBuffer = 0;  // to store the ASM point on account creation
-    int i = 0;
+    int i = 3;  // user account starts from 3
 
     while(user[i].id != '\0')
     {
@@ -78,7 +134,7 @@ void registration()
 
     printf("Enter user name : ");
     scanf(" %[^'\n']", &_nameBuffer);
-    string_copy( user[i].name, _nameBuffer);
+    stringCopy( user[i].name, _nameBuffer);
 
     email_ask:
     printf("Enter a valid email : ");
@@ -88,9 +144,9 @@ void registration()
         printf("Error! Invalid email entered.\n");
         goto email_ask;
     }
-    for( int j = 0; j < Max_User; j++)
+    for( int j = 0; j < MAX_USER; j++)  // 0 to 2 is intentionally included
     {
-        if( compare_string( _mailBuffer, user[j].email) == true)
+        if( stringCompare( _mailBuffer, user[j].email) == true)
         {
             printf("Sorry, this email has been connected to another account!\n");
             goto email_ask;
@@ -98,7 +154,7 @@ void registration()
         else if( user[j].id == '\0')  // end the loop early if there are no longer user
             break;
     }
-    string_copy( user[i].email, _mailBuffer);
+    stringCopy( user[i].email, _mailBuffer);
 
     passwd_ask:
     printf("Enter password : ");
@@ -108,7 +164,7 @@ void registration()
         printf("Error! The password is not strong enough!\n");
         goto passwd_ask;
     }
-    string_copy( user[i].password, _passwuseruffer);
+    stringCopy( user[i].password, _passwuseruffer);
 
     pts_ask:
     printf("Enter ASM point [0-500] : ");
@@ -119,6 +175,7 @@ void registration()
         goto pts_ask;
     }
     user[i].ASMpts = _asmPtsBuffer;
+    stringCopy( user[i].transacMsg, "-");  // replace "\0" with "-\0" to show more readable
 
     fptr = fopen( filePath, "ab");
     if( fptr == NULL) 
@@ -137,30 +194,48 @@ void registration()
     printf("Your account has been successfully created!\n");
 }
 
-void saveUserData2File()
+void writeUserToFile()
 {
     int i = 0;
-    while( user[i].email[0] != '\0' && i < Max_User)  // easier to find the end of the data with email being null char
+    while( user[i].email[0] != '\0' && i < MAX_USER)  // easier to find the end of the data with email being null char
     {
         i++;
     };  // to fetch only the necessary amount of user
     fptr = fopen( filePath, "wb");  // overwrite the data every time the data is updated.
-    if( fptr == NULL)
+    if( fptr != NULL) 
     {
-        perror("Error opening the user database for saving data!");
+        size_t writtenUserAmount = fwrite( &user[0], sizeof(User), i, fptr);
+        if( writtenUserAmount == i)
+        {
+            fclose(fptr);
+            printf("User data saved successfully.\n");
+            return ;
+        }
+        perror("Error saving user data to file.");
+        fclose(fptr);
         exit(1);
     }
-    size_t writtenUserAmount = fwrite( &user[0], sizeof(user), i, fptr);
+    perror("Error opening the user database for saving data!");
+    exit(1);
 }
 
-void userDelete( int userId)
+void deleteUser( int userId)
 {   
     int deleteId;
     bool isThereUser = false;
+
+    askDeleteId:
     printf("Enter the id of the user to delete : ");
     scanf( "%d", &deleteId);
 
-    for( int i = 0; user[i].email[0] != '\0'; i++)
+    if( deleteId >= 1 && deleteId <= 3 )
+    {
+        printf( "Sorry, the id is not avaialable to delete.\n");
+        goto askDeleteId;
+    }
+
+    // counting from 3 to skip admin acc and accelerate searching
+    for( int i = 3; user[i].email[0] != '\0'; i++)   
     {
         if( user[i].id == deleteId)
         {
@@ -187,21 +262,52 @@ void userDelete( int userId)
     {
         i++;
     };
-    while( user[i].id != 0 || i != Max_User-1)
+    while( user[i].id != 0 || i != MAX_USER-1)
     {
         user[i].id = user[i+1].id;
-        string_copy( user[i].name, user[i+1].name);
-        string_copy( user[i].email, user[i+1].email);
-        string_copy( user[i].password, user[i+1].password);
+        stringCopy( user[i].name, user[i+1].name);
+        stringCopy( user[i].email, user[i+1].email);
+        stringCopy( user[i].password, user[i+1].password);
         user[i].ASMpts = user[i+1].ASMpts;
         i++;
     }
-    saveUserData2File();
-    if( deleteId == userId)
-        start_menu();
+    writeUserToFile();
+    printf("Account deleted successfully!\n");
+    startMenu();
 }
 
-void string_copy( char dest[], char buffer[])  // copy from buffer array to destination array
+void searchUser()
+{
+    int id;
+    bool found = false;
+    askIdToSearch:
+    printf("Enter the id number you want to search : ");
+    scanf( "%d", &id);
+    if( id < 1 || id > MAX_USER)
+    {
+        printf("Invalid user ID!");
+        goto askIdToSearch;
+    }
+    for( int i = 0; user[i].email[0] != '\0'; i++)
+    {
+        if( user[i].id == id)
+        {
+            found = true;
+            break;
+        }
+    }
+    if( found == true)
+    {
+        showProfile(id);
+    }
+    else
+    {
+        printf("No user with such ID is found");
+    }
+    return ;
+}
+
+void stringCopy( char dest[], char buffer[])  // copy from buffer array to destination array
 {
     int i = 0;  // to index the arrays
     while( buffer[i] != '\0')  // as long as the content is not a null character
@@ -212,7 +318,7 @@ void string_copy( char dest[], char buffer[])  // copy from buffer array to dest
     dest[i] = '\0';  // add null character manually to set the end of destination array
 }
 
-void start_menu()
+void startMenu()
 {
     int _command = 0; // to get the sign in/up decision
     printf("1. Sign in \n");
@@ -223,14 +329,14 @@ void start_menu()
     switch(_command)
     {
         case 1:
-            sign_in_page();
+            signInPage();
             break;
         case 2:
             registration();
-            start_menu();
+            startMenu();
             break;
         case 3:
-            exit(0);
+            doExit();
             break;
         default:
             perror("Error! Unspported input detected!\n");
@@ -240,58 +346,84 @@ void start_menu()
     };
 }
 
-void app_in_menu( int id)
+void userMenu( int id)
 {
     int _command = 0; // to get the app in menu decision
-    printf("\nHello, This is the menu inside account.\n");
-    printf("1. Profile\n");
+    printf("\n1. Profile\n");
     printf("2. Give ASM Points\n");
     printf("3. Log Out\n");
     printf("4. Log Out & Exit\n");
-    if( ( id >= 1) && ( id <= 3))
-        printf("5. Deleter User\n");
     scanf("%d", &_command);
 
     switch(_command)
     {
         case 1:
             showProfile( id);
-            app_in_menu( id);
+            userMenu( id);
             break;
         case 2:
             ptsProcess( id);
-            app_in_menu( id);
+            userMenu( id);
             break;
         case 3:
             logout(id);
-            start_menu();
+            startMenu();
             break;
         case 4:
             logout(id);
-            exit(0);
+            doExit();
             break;
         default:
             break;
     };
-    if( ( id >= 1) && ( id <= 3) && _command == 5)
+    userMenu( id);
+}
+
+void adminMenu( int id)
+{
+    int _command = 0; // to get the app in menu decision
+    printf("\n1. Profile\n");
+    printf("2. Delete User\n");
+    printf("3. Search User\n");
+    printf("4. Log Out\n");
+    printf("5. Log Out & Exit\n");
+    scanf("%d", &_command);
+
+    switch(_command)
     {
-        userDelete(id);
-        app_in_menu(id);
-    }
-    else
-    {
-        perror("Error! Unspported input detected!\n");
-        perror("Ending the program...\n");
-        exit(1);
-    }
+        case 1:
+            showProfile( id);
+            adminMenu( id);
+            break;
+        case 2:
+            deleteUser(id);
+            adminMenu(id);
+            break;
+        case 3:
+            searchUser(id);
+            adminMenu(id);
+            break;
+        case 4:
+            logout(id);
+            startMenu();
+            break;
+        case 5:
+            logout(id);
+            doExit();
+            break;
+        default:
+            break;
+    };
+    adminMenu(id);
 }
 
 void showProfile( int id)
 {
-    printf("User ID     : %d\n",user[id-1].id);
-    printf("User Name   : %s\n",user[id-1].name);
-    printf("User Email  : %s\n",user[id-1].email);
-    printf("ASM Balance : %d\n",user[id-1].ASMpts);
+    printf("User ID         : %d\n", user[id-1].id);
+    printf("User Name       : %s\n", user[id-1].name);
+    printf("User Email      : %s\n", user[id-1].email);
+    printf("ASM Balance     : %d\n", user[id-1].ASMpts);
+    printf("Transac Message : %s\n", user[id-1].transacMsg);
 }
 
 void logout( int id)
@@ -308,7 +440,7 @@ void logout( int id)
     }  // '\0' is also appended this way to end the array index 
 }
 
-bool compare_string( char buffer[], char key[])
+bool stringCompare( char buffer[], char key[])
 {
     int i = 0;
     do
@@ -411,22 +543,22 @@ bool isValidEmail( char email_to_valid[])
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
-    askReceiveId:
+    askreceiveId:
     printf("Enter the user id you want to give : ");
     scanf(" %d", &receiveId);
-    if( receiveId > Max_User)
+    if( receiveId > MAX_USER || receiveId < 4)  // normal ID must be 4-100
     {
         printf("Error! Invalid user id.\n");
-        goto askReceiveId;
+        goto askreceiveId;
     }
-    for( int i = 0; user[i].id != '\0'; i++)
+    for( int i = 3; user[i].email[0] != '\0'; i++)  // more accurate to find with string initialized '\0' 
     {
         if( user[i].id == receiveId)
             goto askPts;
     }
-    // when user is not found
+    // when user is not found ( may be skipped by branching askPts above)
     printf("Error! The user does not exist.\n");
-    goto askReceiveId;
+    goto askreceiveId;
 
     askPts:
     printf("Enter ASM amount to give : ");
@@ -438,28 +570,79 @@ void ptsProcess( int giveId)
     }
 
     ptsGive( giveId, receiveId, pts);
+    
+    // transac = (Transac*)malloc(sizeof(Transac));
+    // if( transac != NULL)
+    // {
+    //     // else?
+    //     transac -> from = giveId;
+    //     transac -> to = receiveId;
+    //     transac -> amount = pts;
+    // }  
+    // else 
+    // {
+    //     printf("Error! Memory allocation for transaction failed.\n");
+    //     exit(1);
+    // }
 
     // apply the changes (file needs to be exclusively controlled)
-    saveUserData2File();
+    writeUserToFile();
 
     printf("You have given %d ASM pts to user %d successfully!\n", pts, receiveId);
 }
 
-void ptsGive( int GiveId, int ReceiveId, int pts)  // both id and pts must hvae been validated
+void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae been validated
 {
-    int i = 0;
-    // start with deduction pts from giver
-    while( user[i].id != GiveId)  // as long as the id doesn't match.
+    int i = 3;
+    char msgBuffer[40] = "\0";
+    // start with deduction pts from giverpoints
+    while( user[i].id != giveId)  // as long as the id doesn't match.
     {
         i++;
     }
     user[i].ASMpts -= pts;
+    snprintf( msgBuffer, sizeof(msgBuffer), "user-%d gave %d points to user-%d", giveId, pts, receiveId);
+    stringCopy( user[i].transacMsg, msgBuffer);
 
-    i = 0;  // start agian for receiver
-    while( user[i].id != ReceiveId)  // as long as the id doesn't match.
+    i = 3;  // start agian for receiver
+    while( user[i].id != receiveId)  // as long as the id doesn't match.
     {
         i++;
     }
     user[i].ASMpts += pts;
+    snprintf( msgBuffer, sizeof(msgBuffer), "user-%d gave %d points to user-%d", giveId, pts, receiveId);
+    stringCopy( user[i].transacMsg, msgBuffer);
 }
 
+void createAdminAcc()
+{
+    /*
+    This way looks more neat for less data.
+    Creating arrarys may impact the loading time
+    */
+    user[0].id = 1;
+    user[1].id = 2;
+    user[2].id = 3;
+    stringCopy( user[0].name, "adm1");
+    stringCopy( user[1].name, "adm2");
+    stringCopy( user[2].name, "adm3");
+    stringCopy( user[0].email, "adm1@gmail.com");
+    stringCopy( user[1].email, "adm2@gmail.com");
+    stringCopy( user[2].email, "adm3@gmail.com");
+    stringCopy( user[0].password, "Adm#1");
+    stringCopy( user[1].password, "Adm#2");
+    stringCopy( user[2].password, "Adm#3");
+    user[0].ASMpts = 0;
+    user[1].ASMpts = 0;
+    user[2].ASMpts = 0;
+    stringCopy( user[0].transacMsg, "-");
+    stringCopy( user[1].transacMsg, "-");
+    stringCopy( user[2].transacMsg, "-");
+}
+
+void doExit()
+{
+    writeUserToFile();
+    printf("Exiting the program.\n");
+    exit(0);
+}

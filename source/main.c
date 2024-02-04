@@ -19,6 +19,7 @@ void doExit();
 void showProfile( int id);
 void logout( int id);
 
+void readUserFromFile();
 void writeUserToFile();
 // void appendTransacToFile();
 
@@ -61,14 +62,7 @@ int onlineUserIDs[MAX_USER];  // to store the id of online user (needs concurren
 
 int main()
 {
-    fptr = fopen( filePath, "rb");
-    if( fptr == NULL)
-    {
-        perror("Error opening the user database!");
-        return 1;
-    }
-    size_t readCount = fread( user, sizeof(User), MAX_USER, fptr);  // accumulate the user number
-    fclose(fptr);
+    readUserFromFile();
 
     createAdminAcc();
 
@@ -192,6 +186,40 @@ void registration()
     fclose(fptr);
 
     printf("Your account has been successfully created!\n");
+}
+
+void readUserFromFile()
+{
+    fptr = fopen( filePath, "rb");
+    if( fptr == NULL)
+    {
+        perror("Error opening the user database!");
+        exit(1);
+    }
+    
+    // file size calculating section
+    fseek( fptr, 0, SEEK_END);  // move the coordinator to 0 byte from EoF
+    /* 
+        used long bcz size_t cannot handle -ive vlaue 
+        which might become problematic; ftell returns -1 if error happens
+    */
+    long fileSize = ftell(fptr);  // tell how is the current coordinator position  
+    /* 
+        set the coordinator/cursor back to 0 byte from BoF (Beginning of File)
+        for the next reading in case, so not too much in need to do
+    */
+    fseek( fptr, 0, SEEK_SET);
+    int readCount = fileSize/sizeof(User);  // get the number of saved users  
+
+    size_t actualReadCount = fread( &user[0], sizeof(User), readCount, fptr);  // accumulate the user number
+    if( actualReadCount == readCount)
+    {
+        printf("User data reading successful.\n");
+        fclose(fptr);
+        return ;
+    }  // else
+    perror("Error! Something bad happened during reading user data.\n");
+    exit(1);
 }
 
 void writeUserToFile()

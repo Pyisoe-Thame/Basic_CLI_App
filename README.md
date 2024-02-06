@@ -7,48 +7,49 @@ This is the homework intended to submit per the requirement of the course Diplom
 
 All the user data is write back to a file accordingly so the data can be persistent. There is no need to recreate the account after restarting the program.
 
+
 ## Features
 
 - User and Admin Structure:
-    The program defines a User structure to store user information, including ID, name, email, password, ASM (Assessment) points, and a transaction message.
-    An Admin account is created at the beginning of the program with fixed IDs and names.
+The program defines a User structure to store user information, including ID, name, email, password, ASM (Assessment) points, and a transaction message.
+An Admin account is created at the beginning of the program with fixed IDs and names.
 
 - File Handling:
-    User data is stored in a binary file (db.bin), and functions readUserFromFile and writeUserToFile are used to read and write user data to/from the file.
-    File paths are defined using a constant (filePath), and file handling operations are performed with FILE pointers.
+User data is stored in a binary file (db.bin), and functions readUserFromFile and writeUserToFile are used to read and write user data to/from the file.
+File paths are defined using a constant (filePath), and file handling operations are performed with FILE pointers.
 
 - Menu System:
-    The program features a menu system with options for sign-in, sign-up, user profile, giving ASM points, deleting users, searching users, and logging out or exiting.
-    Separate menus are provided for regular users and admin users.
+The program features a menu system with options for sign-in, sign-up, user profile, giving ASM points, deleting users, searching users, and logging out or exiting.
+Separate menus are provided for regular users and admin users.
 
 - User Authentication:
-    The program implements a simple email/password authentication system for user sign-in.
-    Password strength is checked during registration using the isStrongPasswd function.
-    Email validation is performed using the isValidEmail function.
+The program implements a simple email/password authentication system for user sign-in.
+Password strength is checked during registration using the isStrongPasswd function.
+Email validation is performed using the isValidEmail function.
 
 - Points Transaction System:
-    Users can give ASM points to other users, and the transactions are recorded in the user's transaction message.
-    The ptsProcess and ptsGive functions handle the point-giving process.
+Users can give ASM points to other users, and the transactions are recorded in the user's transaction message.
+The ptsProcess and ptsGive functions handle the point-giving process.
 
 - Online User Tracking:
-    An array (onlineUserIDs) is used to track online users, allowing the program to manage user sessions.
+An array (onlineUserIDs) is used to track online users, allowing the program to manage user sessions.
 
 - Initialization:
-    The createAdminAcc function initializes three admin accounts during program startup.
+The createAdminAcc function initializes three admin accounts during program startup.
 
 - Code Organization:
-    Functions are organized to handle specific tasks, improving code readability and maintainability.
-    Some code sections are commented for clarity.
+Functions are organized to handle specific tasks, improving code readability and maintainability.
+Some code sections are commented for clarity.
 
 - Error Handling:
-    Error messages are displayed when file operations encounter issues.
-    Some input validation is implemented to ensure data integrity.
+Error messages are displayed when file operations encounter issues.
+Some input validation is implemented to ensure data integrity.
 
 - Code Structure:
-    The program structure includes a continuous loop in the main function for the start menu, creating an infinite loop until the program is exited.
+The program structure includes a continuous loop in the main function for the start menu, creating an infinite loop until the program is exited.
 
 - Code Quality:
-    The code includes comments and uses meaningful function and variable names, contributing to its readability.
+The code includes comments and uses meaningful function and variable names, contributing to its readability.
 
 
 ## 🚀 About Me

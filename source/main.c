@@ -38,7 +38,8 @@ void adminMenu( int id);
 
 void doExit( int x);
 void showProfile( int id);
-// void logout( int id);
+void login( int id);
+void logout( int id);
 
 void readUserFromFile();
 void writeUserToFile();
@@ -54,16 +55,17 @@ void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
 
 // selective special character set
-char special[] = { '\"', '\'', '~', '`', '@', '#', '$', '%', '^', '&', 
-                    '*', '(', ')', '-', '_', '+', '=', '<', '>', ',', 
-                    '.', '?', '/', '\\', '|', '[', ']', '{', '}'};
+char special[] = { '\"', '\'', '~',  '`', '@', '#', '$', '%', '^', '&', 
+                    '*',  '(', ')',  '-', '_', '+', '=', '<', '>', ',', 
+                    '.',  '?', '/', '\\', '|', '[', ']', '{', '}'};
 const char * filePath = "../data/db.bin";  // relative file path to binary file
 FILE * fptr;
 User * user;
 int totalUser = 0;
 
 // Transac * transac = NULL;  // initialise indefinite transaction events 
-// int onlineUserIDs[MAX_USER];  // to store the id of online user (needs concurrency control)
+int * onlineUserID;  // to store the id of online user (needs concurrency control)
+int totalOnlineUser = 0;
 
 int main()
 {
@@ -82,35 +84,29 @@ void signInPage()
 {
     char _mailBuffer[50];  // to store mail temporarily during input process
     char _passwdBuffer[30];  // to store password temporarily during input process
-    int id = 0;  // to store the id of the user who is logging in
-    bool mailExist = false;
     printf("Enter email : ");
     scanf(" %[^'\n']", &_mailBuffer);
 
-    for( int i = 0; i < totalUser; i++)
+    for( int i = 0; i < totalUser; i++)  // loop will run to the fullest unless mail found
     {
         if( stringCompare( _mailBuffer, user[i].email) == true)
         {    
-            mailExist = true;
-            id = i + 1;
-            break;
+            int id = user[i].id;  // i-1 no longer works; if a user deleted, id will shuffle
+            printf("Enter password : ");
+            scanf(" %[^'\n']", &_passwdBuffer);
+            if( stringCompare( _passwdBuffer, user[i].password) == 1)
+            {
+                login(id); 
+                if( id >= 1 && id <= 3)
+                    adminMenu(id);
+                userMenu(id);  
+            }
+            printf("Sorry, the password you entered is invalid!\n");
+            return ;
         }
-    }
-    if( mailExist == true)
-    {
-        printf("Enter password : ");
-        scanf(" %[^'\n']", &_passwdBuffer);
-        if( stringCompare( _passwdBuffer, user[id-1].password) == 1)
-        {
-            if( id >= 1 && id <= 3)
-                adminMenu(id);
-            userMenu(id);  
-        }
-        printf("Sorry, the password you entered is invalid!\n");
-        startMenu();
     }
     printf("Sorry, the email you entered is not registered!\n");
-    startMenu();
+    return ;
 }
 
 void registration()
@@ -408,11 +404,11 @@ void userMenu( int id)
             userMenu( id);
             break;
         case 3:
-            // logout(id);
+            logout(id);
             startMenu();
             break;
         case 4:
-            // logout(id);
+            logout(id);
             doExit(0);
             break;
         default:
@@ -446,11 +442,11 @@ void adminMenu( int id)
             adminMenu(id);
             break;
         case 4:
-            // logout(id);
+            logout(id);
             startMenu();
             break;
         case 5:
-            // logout(id);
+            logout(id);
             doExit(0);
             break;
         default:
@@ -468,19 +464,40 @@ void showProfile( int id)
     printf("Transac Message : %s\n", user[id-1].transacMsg);
 }
 
-// void logout( int id)
-// {
-//     int i = 0;
-//     while( onlineUserIDs[i] != id )
-//     {
-//         i++;
-//     }
-//     while( onlineUserIDs[i] != '\0')  // Shift the array later than the logout id
-//     {
-//         onlineUserIDs[i] = onlineUserIDs[i+1];
-//         i++;
-//     }  // '\0' is also appended this way to end the array index 
-// }
+void login( int id)
+{
+    totalOnlineUser++;
+    onlineUserID = (int*)realloc( onlineUserID, sizeof(int) * totalOnlineUser);
+    onlineUserID[totalOnlineUser-1] = id;
+    return ;
+}
+
+void logout( int logoutId)
+{
+    for( int i = 0; i < totalOnlineUser; i++)  // loop will end even if no logoutId found
+    {
+        if( onlineUserID[i] == logoutId)
+        {
+            onlineUserID[i] = onlineUserID[totalOnlineUser-1];  // replace with last one
+            totalOnlineUser--;
+            int * tempOnlineUserID = (int*) malloc( sizeof(int) * totalOnlineUser);
+/*
+    be aware the total online user is now ONE LESS than before
+    check if ZERO and unless proceed the next assignment looping 
+    if ZERO malloc above will return ZERO pointer or NULL depending on the compiler
+    be cautious when working with memory allocations
+*/
+            if( totalOnlineUser != 0)
+                for( int j = 0; j < totalOnlineUser; j++)  
+                    tempOnlineUserID[j] = onlineUserID[j];
+            free(onlineUserID);  // free the old memory from global pointer
+            onlineUserID = tempOnlineUserID;  // assign the new memory to global pointer
+            break;  // immediate drop out to reduce runtime overhead
+            //  the outer loop with new limit number( total user online) will be neglected
+        }
+    }
+    return ;
+}
 
 bool stringCompare( char buffer[], char key[])
 {

@@ -1,5 +1,5 @@
 
-# DSA_Assignment_06
+# DSA_Assignment
 
 A basic command-line application for a user management system with features such as user registration, login, profile management, points transactions, and admin functionalities.
 

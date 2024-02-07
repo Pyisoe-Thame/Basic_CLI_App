@@ -675,30 +675,27 @@ void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae 
 
 void createAdminAcc()
 {
+    char name[20];
+    char email[41];
+    char password[30];
+    int ASMpts; 
+
     totalUser = 3;  
     user = (User*) realloc( user, sizeof(User) * 3);
-    /*
-        This way looks more neat for less data.
-        Creating arrays may impact the loading time
-    */
-    user[0].id = 1;
-    user[1].id = 2;
-    user[2].id = 3;
-    stringCopy( user[0].name, "adm1");
-    stringCopy( user[1].name, "adm2");
-    stringCopy( user[2].name, "adm3");
-    stringCopy( user[0].email, "adm1@gmail.com");
-    stringCopy( user[1].email, "adm2@gmail.com");
-    stringCopy( user[2].email, "adm3@gmail.com");
-    stringCopy( user[0].password, "Adm#1");
-    stringCopy( user[1].password, "Adm#2");
-    stringCopy( user[2].password, "Adm#3");
-    user[0].ASMpts = 0;
-    user[1].ASMpts = 0;
-    user[2].ASMpts = 0;
-    stringCopy( user[0].transacMsg, "-");
-    stringCopy( user[1].transacMsg, "-");
-    stringCopy( user[2].transacMsg, "-");
+
+    for( int i = 0; i < 3; i++)
+    {
+        sprintf( name, "adm%d", i+1);
+        sprintf( name, "adm%d@gmail.com", i+1);
+        sprintf( name, "Adm#%d", i+1);
+
+        user[i].id = i + 1;  // id starts from 1
+        stringCopy( user[i].name, name);
+        stringCopy( user[i].email, email);
+        stringCopy( user[i].password, password);
+        user[i].ASMpts = 0;
+        stringCopy( user[i].transacMsg, "-");
+    }
 }
 
 void doExit( int x)  

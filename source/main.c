@@ -39,7 +39,7 @@ void startMenu();
 void userMenu( int id);
 void adminMenu( int id);
 
-void doExit( int x);
+void doExit();
 void showProfile( int id);
 void changeMenu( int id);
 void changeName( int id);
@@ -190,13 +190,13 @@ void registration()
     if( fptr == NULL) 
     {
         perror("Error opening file to append!");
-        doExit(1);
+        exit(EXIT_FAILURE);
     }
     size_t elementWritten = fwrite( &user[totalUser-1], sizeof(User), 1, fptr);
     if( elementWritten != 1)
     {
         perror("Error writing created user to the file!");
-        doExit(1);
+        exit(EXIT_FAILURE);
     }
     fclose(fptr);
 
@@ -219,7 +219,7 @@ void readUserFromFile()
     if( fptr == NULL)
     {
         perror("Error opening the user database!");
-        doExit(1);
+        exit(EXIT_FAILURE);
     }
     
     // file size calculating section
@@ -244,7 +244,7 @@ void readUserFromFile()
         return ;
     }  // else
     perror("Error! Something bad happened during reading user data.\n");
-    doExit(1);
+    exit(EXIT_FAILURE);
 }
 
 void writeUserToFile()
@@ -265,10 +265,10 @@ void writeUserToFile()
         }
         perror("Error saving user data to file.");
         fclose(fptr);
-        doExit(1);
+        exit(EXIT_FAILURE);
     }
     perror("Error opening the user database for saving data!");
-    doExit(1);
+    exit(EXIT_FAILURE);
 }
 
 void deleteUser( int userId)
@@ -388,7 +388,7 @@ void startMenu()
         default:
             perror("Error! Unspported input detected!\n");
             perror("Ending the program...\n");
-            doExit(1);
+            exit(EXIT_FAILURE);
             break;
     };
     startMenu();
@@ -548,9 +548,18 @@ void changePasswd( int id)
 {
     char passwdBuffer[30];
     memset( passwdBuffer, 0, sizeof(passwdBuffer));
-    
+
+    old_passwd_ask:
+    printf("Enter the old password : ");
+    scanf(" %29[^'\n']", &passwdBuffer);
+    if( stringCompare( passwdBuffer, getUser(id) -> password) == false)
+    {    
+        printf("Old password invalid!\n");
+        goto old_passwd_ask;
+    }
+
     passwd_ask:
-    printf("Enter new password : ");
+    printf("\nEnter new password : ");
     scanf(" %29[^'\n']", &passwdBuffer);
     if( !isStrongPasswd( passwdBuffer))
     {
@@ -837,12 +846,12 @@ void createAdminAcc()
     }
 }
 
-void doExit( int x)  
+void doExit()  
 {
     // program may crash upon failing the following functions again and again
     writeUserToFile();
     free(user);
     printf("Exiting the program.\n");
-    exit(x);
+    exit(0);
 }
 

@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define MAX_USER
 
 typedef struct{
     int id;
-    char name[20];
+    char name[30];
     char email[41];
     char password[30];
     int ASMpts;
@@ -38,6 +39,10 @@ void adminMenu( int id);
 
 void doExit( int x);
 void showProfile( int id);
+void changeMenu( int id);
+void changeName( int id);
+void changeEmail( int id);
+void changePasswd( int id);
 void login( int id);
 void logout( int id);
 
@@ -49,7 +54,8 @@ bool stringCompare( char [], char []);
 void stringCopy( char [], char []);
 
 bool isStrongPasswd( char []);
-bool isValidEmail( char []);
+bool isValidEmail( char email_to_Valid[]);
+bool isEmailTaken( char email_to_valid[]);
 
 void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
@@ -111,35 +117,38 @@ void signInPage()
 
 void registration()
 {
-    char _nameBuffer[20];  // to store mail temporarily during input process
-    char _mailBuffer[50];  // to store mail temporarily during input process
-    char _passwuseruffer[30];  // to store password temporarily during input process
-    int _asmPtsBuffer = 0;  // to store the ASM point on account creation
+    char nameBuffer[30];  // to store mail temporarily during input process
+    char mailBuffer[50];  // to store mail temporarily during input process
+    char passwdBuffer[30];  // to store password temporarily during input process
+
+    // initialise with \0 to make them end with \0 because %[^'\n'] doesn't
+    memset( nameBuffer, 0, sizeof(nameBuffer));
+    memset( mailBuffer, 0, sizeof(mailBuffer));
+    memset( passwdBuffer, 0, sizeof(passwdBuffer));
+
+    int asmPtsBuffer = 0;  // to store the ASM point on account creation
 
     printf("Enter user name : ");
-    scanf(" %[^'\n']", &_nameBuffer);
+    scanf(" %29[^'\n']", &nameBuffer);
 
     email_ask:
     printf("Enter a valid email : ");
-    scanf(" %[^'\n']", &_mailBuffer);
-    if(!isValidEmail(_mailBuffer))  // check if valid email is entered
+    scanf(" %40[^'\n']", &mailBuffer);
+    if( !isValidEmail(mailBuffer)) 
     {
         printf("Error! Invalid email entered.\n");
         goto email_ask;
     }
-    for( int j = 0; j < totalUser; j++)  // 0 to 2 is intentionally included
+    else if( isEmailTaken(mailBuffer))  
     {
-        if( stringCompare( _mailBuffer, user[j].email) == true)
-        {
-            printf("Sorry, this email has been connected to another account!\n");
-            goto email_ask;
-        }
+        printf("Error! The email is connected to another account.\n");
+        goto email_ask;
     }
 
     passwd_ask:
     printf("Enter password : ");
-    scanf(" %[^'\n']", &_passwuseruffer);
-    if( !isStrongPasswd( _passwuseruffer))
+    scanf(" %29[^'\n']", &passwdBuffer);
+    if( !isStrongPasswd( passwdBuffer))
     {
         printf("Error! The password is not strong enough!\n");
         goto passwd_ask;
@@ -147,8 +156,8 @@ void registration()
 
     pts_ask:
     printf("Enter ASM point [0-500] : ");
-    scanf(" %d", &_asmPtsBuffer);
-    if( _asmPtsBuffer > 500 || _asmPtsBuffer < 0 )
+    scanf(" %d", &asmPtsBuffer);
+    if( asmPtsBuffer > 500 || asmPtsBuffer < 0 )
     {
         printf("Error! Invalid amount of ASM point. \n");
         goto pts_ask;
@@ -163,12 +172,12 @@ void registration()
     registering user.
 */ 
     user[totalUser-1].id = findMaxId( user, totalUser-1) + 1; 
-    stringCopy( user[totalUser-1].name, _nameBuffer);
-    stringCopy( user[totalUser-1].email, _mailBuffer);
-    stringCopy( user[totalUser-1].password, _passwuseruffer);
-    user[totalUser-1].ASMpts = _asmPtsBuffer;
+    stringCopy( user[totalUser-1].name, nameBuffer);
+    stringCopy( user[totalUser-1].email, mailBuffer);
+    stringCopy( user[totalUser-1].password, passwdBuffer);
+    user[totalUser-1].ASMpts = asmPtsBuffer;
     // replace "\0" with "-\0" to show more readable format 
-    stringCopy( user[totalUser].transacMsg, "-");  
+    stringCopy( user[totalUser-1].transacMsg, "-");  
 
     fptr = fopen( filePath, "ab");
     if( fptr == NULL) 
@@ -388,9 +397,10 @@ void userMenu( int id)
 {
     int _command = 0; // to get the app in menu decision
     printf("\n1. Profile\n");
-    printf("2. Give ASM Points\n");
-    printf("3. Log Out\n");
-    printf("4. Log Out & Exit\n");
+    printf("2. Change Menu\n");
+    printf("3. Give ASM Points\n");
+    printf("4. Log Out\n");
+    printf("5. Log Out & Exit\n");
     scanf("%d", &_command);
 
     switch(_command)
@@ -400,14 +410,18 @@ void userMenu( int id)
             userMenu( id);
             break;
         case 2:
-            ptsProcess( id);
+            changeMenu( id);
             userMenu( id);
             break;
         case 3:
+            ptsProcess( id);
+            userMenu( id);
+            break;
+        case 4:
             logout(id);
             startMenu();
             break;
-        case 4:
+        case 5:
             logout(id);
             doExit(0);
             break;
@@ -455,13 +469,118 @@ void adminMenu( int id)
     adminMenu(id);
 }
 
+void changeMenu( int id)
+{
+    int changeChoice = 0;
+    printf("\n1. Change name\n");
+    printf("2. Change email\n");
+    printf("3. Change password\n");
+    scanf("%d", &changeChoice);
+
+    switch(changeChoice)
+    {
+        case 1:
+            changeName(id);
+            break;
+        case 2:
+            changeEmail(id);
+            break;
+        case 3:
+            changePasswd(id);
+            break;
+        default:
+            printf("Other options are not supported!\n");
+            break;
+    }
+}
+
+void changeName( int id)
+{
+    char name[30];
+    // I don't know when will the input end so initialise it with all 0 using memset
+    memset( name, 0, sizeof(name));
+    printf("Enter new name :");
+    scanf(" %29[^'\n']", &name);  // accept up to only 29 because 30 in the struct minus \0
+    for( int i = 3; i < totalUser; i++)
+    {
+        if( user[i].id == id)
+        {
+            stringCopy( user[i].name, name);
+            printf("Name successfully changed!\n");
+            break; 
+        }
+    }
+}
+
+void changeEmail( int id)
+{
+    char emailBuffer[41];
+    // I don't know when will the input end so initialise it with all 0 using memset
+    memset( emailBuffer, 0, sizeof(emailBuffer));
+
+    email_ask:  // local branch
+    printf("Enter new email :");
+    scanf(" %40[^'\n']", &emailBuffer);  // accept up to only 40 because 41 in the struct minus \0
+    if(!isValidEmail( emailBuffer))
+    {
+        printf("Error! Invalid email entered.\n");
+        goto email_ask;
+    }
+    else if( isEmailTaken( emailBuffer))  
+    {
+        printf("Error! The email is connected to another account.\n");
+        goto email_ask;
+    }
+
+    for( int i = 3; i < totalUser; i++)
+    {
+        if( user[i].id == id)
+        {
+            stringCopy( user[i].email, emailBuffer);
+            printf("Email successfully changed!\n");
+            break; 
+        }
+    }
+}
+
+void changePasswd( int id)
+{
+    char passwdBuffer[30];
+    memset( passwdBuffer, 0, sizeof(passwdBuffer));
+    
+    passwd_ask:
+    printf("Enter new password : ");
+    scanf(" %29[^'\n']", &passwdBuffer);
+    if( !isStrongPasswd( passwdBuffer))
+    {
+        printf("Error! The password is not strong enough!\n");
+        goto passwd_ask;
+    }
+
+    for( int i = 3; i < totalUser; i++)
+    {
+        if( user[i].id == id)
+        {
+            stringCopy( user[i].password, passwdBuffer);
+            printf("Password successfully changed!\n");
+            break; 
+        }
+    }
+}
+
 void showProfile( int id)
 {
-    printf("User ID         : %d\n", user[id-1].id);
-    printf("User Name       : %s\n", user[id-1].name);
-    printf("User Email      : %s\n", user[id-1].email);
-    printf("ASM Balance     : %d\n", user[id-1].ASMpts);
-    printf("Transac Message : %s\n", user[id-1].transacMsg);
+    for( int i = 0; i < totalUser; i++)
+    {
+        if( user[i].id == id)
+        {
+            printf("User ID         : %d\n", user[i].id);
+            printf("User Name       : %s\n", user[i].name);
+            printf("User Email      : %s\n", user[i].email);
+            printf("ASM Balance     : %d\n", user[i].ASMpts);
+            printf("Transac Message : %s\n", user[i].transacMsg);
+        }
+    }
 }
 
 void login( int id)
@@ -599,6 +718,14 @@ bool isValidEmail( char email_to_valid[])
     return dot_flag;
 }
 
+bool isEmailTaken( char email_to_valid[])
+{
+    for( int i = 0; i < totalUser; i++)  // 0 to 2 is intentionally included
+        if( stringCompare( email_to_valid, user[i].email) == true)
+            return true; 
+    return false;
+}
+
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
@@ -675,9 +802,9 @@ void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae 
 
 void createAdminAcc()
 {
-    char name[20];
-    char email[41];
-    char password[30];
+    char name[5];
+    char email[15];
+    char password[6];
     int ASMpts; 
 
     totalUser = 3;  
@@ -686,8 +813,8 @@ void createAdminAcc()
     for( int i = 0; i < 3; i++)
     {
         sprintf( name, "adm%d", i+1);
-        sprintf( name, "adm%d@gmail.com", i+1);
-        sprintf( name, "Adm#%d", i+1);
+        sprintf( email, "adm%d@gmail.com", i+1);
+        sprintf( password, "Adm#%d", i+1);
 
         user[i].id = i + 1;  // id starts from 1
         stringCopy( user[i].name, name);

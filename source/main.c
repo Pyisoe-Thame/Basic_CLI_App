@@ -3,7 +3,14 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define MAX_USER
+#define MAX_TRANSACTION 100
+
+typedef struct{
+    int from;
+    int to;
+    int amount;
+    // char eventTime[30];
+}Transac;
 
 typedef struct{
     int id;
@@ -15,21 +22,16 @@ typedef struct{
         temporarily storing the last transaction
         ( which will be made a separate structure in the future) 
     */
-    char transacMsg[40];  
+    char transacMsg[30]; 
+    Transac transac[MAX_TRANSACTION]; 
 }User;
-
-// typedef struct{
-//     int from;
-//     int to;
-//     int amount;
-//     char eventTime[30];
-// }Transac;
 
 void createAdminAcc();
 void signInPage();
 void registration();
 void deleteUser( int id);  // id needed to know if the user is deleting its own or not
 void searchUser();
+User * getUser(int id);
 int findMaxId( User * user, int totalUser);
 
 // Menu
@@ -56,9 +58,11 @@ void stringCopy( char [], char []);
 bool isStrongPasswd( char []);
 bool isValidEmail( char email_to_Valid[]);
 bool isEmailTaken( char email_to_valid[]);
+bool isUserExisting( int id);
 
 void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
+void addTransac( Transac transac[MAX_TRANSACTION], int giveId, int receiveId, int pts);
 
 // selective special character set
 char special[] = { '\"', '\'', '~',  '`', '@', '#', '$', '%', '^', '&', 
@@ -88,19 +92,22 @@ int main()
 
 void signInPage()
 {
-    char _mailBuffer[50];  // to store mail temporarily during input process
-    char _passwdBuffer[30];  // to store password temporarily during input process
-    printf("Enter email : ");
-    scanf(" %[^'\n']", &_mailBuffer);
+    char mailBuffer[41];  // to store mail temporarily during input process
+    char passwdBuffer[30];  // to store password temporarily during input process
+    memset( mailBuffer, 0, sizeof(mailBuffer));
+    memset( passwdBuffer, 0, sizeof(passwdBuffer));
+    
+    printf("\nEnter email : ");
+    scanf(" %40[^'\n']", &mailBuffer);
 
     for( int i = 0; i < totalUser; i++)  // loop will run to the fullest unless mail found
     {
-        if( stringCompare( _mailBuffer, user[i].email) == true)
+        if( stringCompare( mailBuffer, user[i].email) == true)
         {    
             int id = user[i].id;  // i-1 no longer works; if a user deleted, id will shuffle
             printf("Enter password : ");
-            scanf(" %[^'\n']", &_passwdBuffer);
-            if( stringCompare( _passwdBuffer, user[i].password) == 1)
+            scanf(" %29[^'\n']", &passwdBuffer);
+            if( stringCompare( passwdBuffer, user[i].password) == true)
             {
                 login(id); 
                 if( id >= 1 && id <= 3)
@@ -128,7 +135,7 @@ void registration()
 
     int asmPtsBuffer = 0;  // to store the ASM point on account creation
 
-    printf("Enter user name : ");
+    printf("\nEnter user name : ");
     scanf(" %29[^'\n']", &nameBuffer);
 
     email_ask:
@@ -270,7 +277,7 @@ void deleteUser( int userId)
     bool isThereUser = false;
 
     askDeleteId:
-    printf("Enter the id of the user to delete : ");
+    printf("\nEnter the id of the user to delete : ");
     scanf( "%d", &deleteId);
 
     if( deleteId >= 1 && deleteId <= 3 )
@@ -326,32 +333,25 @@ void deleteUser( int userId)
 void searchUser()
 {
     int id;
-    bool found = false;
-    askIdToSearch:
-    printf("Enter the id number you want to search : ");
+    printf("\nEnter the id number you want to search : ");
     scanf( "%d", &id);
-    if( id < 1 || id > totalUser)
+    if( !isUserExisting(id))
     {
-        printf("Invalid user ID!");
-        goto askIdToSearch;
+        printf("The user doesn't exist!\n");
+        return ;
     }
-    for( int i = 0; user[i].email[0] != '\0'; i++)
+    showProfile( id);
+    return ;
+}
+
+User * getUser(int id)
+{
+    for( int i = 0; i < totalUser; i++)
     {
         if( user[i].id == id)
-        {
-            found = true;
-            break;
-        }
+            return &user[i];
     }
-    if( found == true)
-    {
-        showProfile(id);
-    }
-    else
-    {
-        printf("No user with such ID is found");
-    }
-    return ;
+    return NULL;
 }
 
 void stringCopy( char dest[], char buffer[])  // copy from buffer array to destination array
@@ -368,7 +368,7 @@ void stringCopy( char dest[], char buffer[])  // copy from buffer array to desti
 void startMenu()
 {
     int _command = 0; // to get the sign in/up decision
-    printf("1. Sign in \n");
+    printf("\n1. Sign in \n");
     printf("2. Sign up \n");
     printf("3. Exit \n");
     scanf("%d", &_command);
@@ -391,6 +391,7 @@ void startMenu()
             doExit(1);
             break;
     };
+    startMenu();
 }
 
 void userMenu( int id)
@@ -570,17 +571,12 @@ void changePasswd( int id)
 
 void showProfile( int id)
 {
-    for( int i = 0; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-        {
-            printf("User ID         : %d\n", user[i].id);
-            printf("User Name       : %s\n", user[i].name);
-            printf("User Email      : %s\n", user[i].email);
-            printf("ASM Balance     : %d\n", user[i].ASMpts);
-            printf("Transac Message : %s\n", user[i].transacMsg);
-        }
-    }
+    User * tempUser = getUser(id);
+    printf("\nUser ID         : %d\n", tempUser -> id);
+    printf("User Name       : %s\n", tempUser -> name);
+    printf("User Email      : %s\n", tempUser -> email);
+    printf("ASM Balance     : %d\n", tempUser -> ASMpts);
+    printf("Transac Message : %s\n", tempUser -> transacMsg);
 }
 
 void login( int id)
@@ -726,52 +722,49 @@ bool isEmailTaken( char email_to_valid[])
     return false;
 }
 
+bool isUserExisting( int id)
+{
+    for( int i = 0; i < totalUser; i++)
+    {
+        if( user[i].id == id)
+            return true;  // immediate return
+    }
+    return false;
+}
+
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
     askreceiveId:
     printf("Enter the user id you want to give : ");
     scanf(" %d", &receiveId);
-    if( receiveId > totalUser || receiveId < 4)  // normal ID must be 4-100
+    if( receiveId >=1 && receiveId <= 3)  // cannot give to admin 
     {
         printf("Error! Invalid user id.\n");
         goto askreceiveId;
     }
-    for( int i = 3; user[i].email[0] != '\0'; i++)  // more accurate to find with string initialized '\0' 
+    else if( !isUserExisting(receiveId))
     {
-        if( user[i].id == receiveId)
-            goto askPts;
+        printf("Error! The user does not exist.\n");
+        goto askreceiveId;
     }
-    // when user is not found ( may be skipped by branching askPts above)
-    printf("Error! The user does not exist.\n");
-    goto askreceiveId;
 
     askPts:
     printf("Enter ASM amount to give : ");
     scanf(" %d", &pts);
-    if( pts > user[giveId-1].ASMpts)
+    if( pts > getUser(giveId) -> ASMpts)
     {
         printf("Error! You cannot give more than you have\n");
+        goto askPts;
+    }
+    else if( pts < 1)
+    {
+        printf("Invalid amount of points.\n");
         goto askPts;
     }
 
     ptsGive( giveId, receiveId, pts);
     
-    // transac = (Transac*)malloc(sizeof(Transac));
-    // if( transac != NULL)
-    // {
-    //     // else?
-    //     transac -> from = giveId;
-    //     transac -> to = receiveId;
-    //     transac -> amount = pts;
-    // }  
-    // else 
-    // {
-    //     printf("Error! Memory allocation for transaction failed.\n");
-    //     doExit(1);
-    // }
-
-    // apply the changes (file needs to be exclusively controlled)
     writeUserToFile();
 
     printf("You have given %d ASM pts to user %d successfully!\n", pts, receiveId);
@@ -779,25 +772,44 @@ void ptsProcess( int giveId)
 
 void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae been validated
 {
-    int i = 3;
-    char msgBuffer[40] = "\0";
-    // start with deduction pts from giverpoints
-    while( user[i].id != giveId)  // as long as the id doesn't match.
-    {
-        i++;
-    }
-    user[i].ASMpts -= pts;
-    snprintf( msgBuffer, sizeof(msgBuffer), "%d points given to user-%d", pts, receiveId);
-    stringCopy( user[i].transacMsg, msgBuffer);
+    User * giver = getUser(giveId);
+    User * receiver = getUser(receiveId);
 
-    i = 3;  // start agian for receiver
-    while( user[i].id != receiveId)  // as long as the id doesn't match.
-    {
-        i++;
-    }
-    user[i].ASMpts += pts;
+    char msgBuffer[30];
+    memset( msgBuffer, 0, sizeof(msgBuffer));  // bitwise initialise to 0
+    
+    giver -> ASMpts -= pts;  // deduct pts from giver
+    snprintf( msgBuffer, sizeof(msgBuffer), "%d points given to user-%d", pts, receiveId);
+    stringCopy( giver -> transacMsg, msgBuffer);  // add transaction message
+    addTransac( giver -> transac, giveId, receiveId, pts);  // add transaction record
+
+    receiver -> ASMpts += pts;  // add pts to receiver
     snprintf( msgBuffer, sizeof(msgBuffer), "%d points received from user-%d", pts, giveId);
-    stringCopy( user[i].transacMsg, msgBuffer);
+    stringCopy( receiver -> transacMsg, msgBuffer);  // add transaction message
+    addTransac( receiver -> transac, giveId, receiveId, pts);  // add transaction record
+}
+
+void addTransac( Transac transac[MAX_TRANSACTION], int giveId, int receiveId, int pts)
+{
+    int i = 0;
+    while( transac[i].from != 0 && i < MAX_TRANSACTION)
+        i++;
+    if( i == MAX_TRANSACTION)
+    {
+        for( int j = 0; j < MAX_TRANSACTION-1; j++)
+            transac[j] = user -> transac[j+1];
+        transac[MAX_TRANSACTION-1].from = giveId;
+        transac[MAX_TRANSACTION-1].to = receiveId;
+        transac[MAX_TRANSACTION-1].amount = pts;
+        return ;
+    }
+    else
+    {
+        transac[i].from = giveId;
+        transac[i].to = receiveId;
+        transac[i].amount = pts;
+        return ;
+    }
 }
 
 void createAdminAcc()

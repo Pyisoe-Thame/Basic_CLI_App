@@ -1,0 +1,8 @@
+[
+{
+  "directory": "C:/Users/pyiso/Desktop/DSA/Assignments/Assignment/build",
+  "command": "C:\\mingw64\\bin\\gcc.exe -g -std=gnu11 -o CMakeFiles\\ASSIGNMENT.dir\\source\\main.c.obj -c C:\\Users\\pyiso\\Desktop\\DSA\\Assignments\\Assignment\\source\\main.c",
+  "file": "C:\\Users\\pyiso\\Desktop\\DSA\\Assignments\\Assignment\\source\\main.c",
+  "output": "CMakeFiles\\ASSIGNMENT.dir\\source\\main.c.obj"
+}
+]

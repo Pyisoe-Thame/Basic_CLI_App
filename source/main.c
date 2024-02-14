@@ -3,26 +3,49 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define MAX_TRANSACTION 100
+//#include "myString.h"
 
-typedef struct{
-    int from;
-    int to;
-    int amount;
-    // char eventTime[30];
-}Transac;
+bool stringCompare( char buffer[], char key[])
+{
+    int i = 0;
+    do
+    {
+        if( buffer[i] != key[i])
+            return false;
+        i++;
+    } while( ( buffer[i] != '\0' ) && ( key[i] != '\0' ));
+
+    if( ( buffer[i] == '\0') && ( key[i] == '\0' ))  // Only if both arrays end at the same index
+        return true;
+    else
+        return false;
+}
+
+void stringCopy( char dest[], char buffer[])  // copy from buffer array to destination array
+{
+    int i = 0;  // to index the arrays
+    while( buffer[i] != '\0')  // as long as the content is not a null character
+    {
+        dest[i] = buffer[i];
+        i++;
+    };  
+    dest[i] = '\0';  // add null character manually to set the end of destination array
+}
+
+
+#include "transac.h"
+
+#define NAME_SIZE 30
+#define EMAIL_SIZE 41
+#define PASSWORD_SIZE 30
 
 typedef struct{
     int id;
-    char name[30];
-    char email[41];
-    char password[30];
+    char name[NAME_SIZE];
+    char email[EMAIL_SIZE];
+    char password[PASSWORD_SIZE];
     int ASMpts;
-    /* 
-        temporarily storing the last transaction
-        ( which will be made a separate structure in the future) 
-    */
-    char transacMsg[30]; 
+    char transacMsg[30];  // this size can be variable so no constant for this
     Transac transac[MAX_TRANSACTION]; 
 }User;
 
@@ -41,6 +64,7 @@ void adminMenu( int id);
 
 void doExit();
 void showProfile( int id);
+void showTransaction( int id);
 void changeMenu( int id);
 void changeName( int id);
 void changeEmail( int id);
@@ -50,10 +74,6 @@ void logout( int id);
 
 void readUserFromFile();
 void writeUserToFile();
-// void appendTransacToFile();
-
-bool stringCompare( char [], char []);
-void stringCopy( char [], char []);
 
 bool isStrongPasswd( char []);
 bool isValidEmail( char email_to_Valid[]);
@@ -62,7 +82,6 @@ bool isUserExisting( int id);
 
 void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
-void addTransac( Transac transac[MAX_TRANSACTION], int giveId, int receiveId, int pts);
 
 // selective special character set
 char special[] = { '\"', '\'', '~',  '`', '@', '#', '$', '%', '^', '&', 
@@ -183,8 +202,10 @@ void registration()
     stringCopy( user[totalUser-1].email, mailBuffer);
     stringCopy( user[totalUser-1].password, passwdBuffer);
     user[totalUser-1].ASMpts = asmPtsBuffer;
-    // replace "\0" with "-\0" to show more readable format 
+// replace "\0" with "-\0" to show more readable format 
     stringCopy( user[totalUser-1].transacMsg, "-");  
+// initialise the memory with zero so I can check with certain conditions
+    memset( user[totalUser-1].transac, 0x00, sizeof(Transac) * MAX_TRANSACTION);
 
     fptr = fopen( filePath, "ab");
     if( fptr == NULL) 
@@ -203,7 +224,7 @@ void registration()
     printf("Your account has been successfully created!\n");
 }
 
-int findMaxId( User* user, int totalUser) 
+int findMaxId( User * user, int totalUser) 
 {
     int maxId = -1;
     // 2 must be the maxId when there is no user created
@@ -354,21 +375,11 @@ User * getUser(int id)
     return NULL;
 }
 
-void stringCopy( char dest[], char buffer[])  // copy from buffer array to destination array
-{
-    int i = 0;  // to index the arrays
-    while( buffer[i] != '\0')  // as long as the content is not a null character
-    {
-        dest[i] = buffer[i];
-        i++;
-    };  
-    dest[i] = '\0';  // add null character manually to set the end of destination array
-}
-
 void startMenu()
 {
     int _command = 0; // to get the sign in/up decision
-    printf("\n1. Sign in \n");
+    putchar('\n');
+    printf("1. Sign in \n");
     printf("2. Sign up \n");
     printf("3. Exit \n");
     scanf("%d", &_command);
@@ -397,11 +408,13 @@ void startMenu()
 void userMenu( int id)
 {
     int _command = 0; // to get the app in menu decision
-    printf("\n1. Profile\n");
+    putchar('\n');
+    printf("1. Profile\n");
     printf("2. Change Menu\n");
     printf("3. Give ASM Points\n");
-    printf("4. Log Out\n");
-    printf("5. Log Out & Exit\n");
+    printf("4. Show Transaction History\n");
+    printf("5. Log Out\n");
+    printf("6. Log Out & Exit\n");
     scanf("%d", &_command);
 
     switch(_command)
@@ -419,10 +432,14 @@ void userMenu( int id)
             userMenu( id);
             break;
         case 4:
+            showTransaction(id);
+            userMenu(id);
+            break;
+        case 5:
             logout(id);
             startMenu();
             break;
-        case 5:
+        case 6:
             logout(id);
             doExit(0);
             break;
@@ -435,7 +452,8 @@ void userMenu( int id)
 void adminMenu( int id)
 {
     int _command = 0; // to get the app in menu decision
-    printf("\n1. Profile\n");
+    putchar('\n');
+    printf("1. Profile\n");
     printf("2. Delete User\n");
     printf("3. Search User\n");
     printf("4. Log Out\n");
@@ -473,7 +491,8 @@ void adminMenu( int id)
 void changeMenu( int id)
 {
     int changeChoice = 0;
-    printf("\n1. Change name\n");
+    putchar('\n');
+    printf("1. Change name\n");
     printf("2. Change email\n");
     printf("3. Change password\n");
     scanf("%d", &changeChoice);
@@ -497,9 +516,10 @@ void changeMenu( int id)
 
 void changeName( int id)
 {
-    char name[30];
+    char name[NAME_SIZE];
     // I don't know when will the input end so initialise it with all 0 using memset
     memset( name, 0, sizeof(name));
+    putchar('\n');  // to make more readable CLI
     printf("Enter new name :");
     scanf(" %29[^'\n']", &name);  // accept up to only 29 because 30 in the struct minus \0
     for( int i = 3; i < totalUser; i++)
@@ -515,9 +535,10 @@ void changeName( int id)
 
 void changeEmail( int id)
 {
-    char emailBuffer[41];
+    char emailBuffer[EMAIL_SIZE];
     // I don't know when will the input end so initialise it with all 0 using memset
-    memset( emailBuffer, 0, sizeof(emailBuffer));
+    memset( emailBuffer, 0x00, sizeof(emailBuffer));
+    putchar('\n');  // to make more readable CLI
 
     email_ask:  // local branch
     printf("Enter new email :");
@@ -546,8 +567,9 @@ void changeEmail( int id)
 
 void changePasswd( int id)
 {
-    char passwdBuffer[30];
-    memset( passwdBuffer, 0, sizeof(passwdBuffer));
+    char passwdBuffer[PASSWORD_SIZE];
+    memset( passwdBuffer, 0x00, sizeof(passwdBuffer));
+    putchar('\n');
 
     old_passwd_ask:
     printf("Enter the old password : ");
@@ -581,11 +603,25 @@ void changePasswd( int id)
 void showProfile( int id)
 {
     User * tempUser = getUser(id);
-    printf("\nUser ID         : %d\n", tempUser -> id);
+    putchar('\n');
+    printf("User ID         : %d\n", tempUser -> id);
     printf("User Name       : %s\n", tempUser -> name);
     printf("User Email      : %s\n", tempUser -> email);
     printf("ASM Balance     : %d\n", tempUser -> ASMpts);
     printf("Transac Message : %s\n", tempUser -> transacMsg);
+}
+
+void showTransaction( int id)
+{
+    User * tempUser = getUser(id);
+    int i = 0;
+    while( tempUser -> transac[i].from != 0 && i < MAX_TRANSACTION)
+    {
+        printf("\nfrom: %d  to: %d  amount: %d", tempUser -> transac[i].from, tempUser -> transac[i].to, tempUser -> transac[i].amount);
+        i++;
+    }
+    putchar('\n');
+    return ;
 }
 
 void login( int id)
@@ -621,22 +657,6 @@ void logout( int logoutId)
         }
     }
     return ;
-}
-
-bool stringCompare( char buffer[], char key[])
-{
-    int i = 0;
-    do
-    {
-        if( buffer[i] != key[i])
-            return false;
-        i++;
-    } while( ( buffer[i] != '\0' ) && ( key[i] != '\0' ));
-
-    if( ( buffer[i] == '\0') && ( key[i] == '\0' ))  // Only if both arrays end at the same index
-        return true;
-    else
-        return false;
 }
 
 bool isStrongPasswd( char passwd[])
@@ -744,6 +764,9 @@ bool isUserExisting( int id)
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
+    char passwdBuffer[PASSWORD_SIZE] = "\0";
+    putchar('\n');
+
     askreceiveId:
     printf("Enter the user id you want to give : ");
     scanf(" %d", &receiveId);
@@ -772,6 +795,15 @@ void ptsProcess( int giveId)
         goto askPts;
     }
 
+    printf("Enter the password to confirm : ");
+    scanf(" %[^'\n']", &passwdBuffer);
+    if( !stringCompare( passwdBuffer, getUser(giveId) -> password))
+    {
+        printf("Password does not match...\n");
+        printf("Please proceed from the start again...\n");
+        return ;
+    }
+
     ptsGive( giveId, receiveId, pts);
     
     writeUserToFile();
@@ -795,37 +827,17 @@ void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae 
     receiver -> ASMpts += pts;  // add pts to receiver
     snprintf( msgBuffer, sizeof(msgBuffer), "%d points received from user-%d", pts, giveId);
     stringCopy( receiver -> transacMsg, msgBuffer);  // add transaction message
-    addTransac( receiver -> transac, giveId, receiveId, pts);  // add transaction record
-}
-
-void addTransac( Transac transac[MAX_TRANSACTION], int giveId, int receiveId, int pts)
-{
-    int i = 0;
-    while( transac[i].from != 0 && i < MAX_TRANSACTION)
-        i++;
-    if( i == MAX_TRANSACTION)
-    {
-        for( int j = 0; j < MAX_TRANSACTION-1; j++)
-            transac[j] = user -> transac[j+1];
-        transac[MAX_TRANSACTION-1].from = giveId;
-        transac[MAX_TRANSACTION-1].to = receiveId;
-        transac[MAX_TRANSACTION-1].amount = pts;
-        return ;
-    }
-    else
-    {
-        transac[i].from = giveId;
-        transac[i].to = receiveId;
-        transac[i].amount = pts;
-        return ;
-    }
+// no need to add a new transaction on receiver side if giver is receiver
+    if( giveId != receiveId) 
+        addTransac( receiver -> transac, giveId, receiveId, pts);  // add transaction record
+    return ;
 }
 
 void createAdminAcc()
 {
-    char name[5];
-    char email[15];
-    char password[6];
+    char name[5];  // sizes specifically customised for admins
+    char email[15];  //    ||
+    char password[6];  //    ||
     int ASMpts; 
 
     totalUser = 3;  
@@ -849,6 +861,7 @@ void createAdminAcc()
 void doExit()  
 {
     // program may crash upon failing the following functions again and again
+    putchar('\n');
     writeUserToFile();
     free(user);
     printf("Exiting the program.\n");

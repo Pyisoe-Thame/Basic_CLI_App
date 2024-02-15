@@ -3,59 +3,14 @@
 #include <stdbool.h>
 #include <string.h>
 
-//#include "myString.h"
-
-bool stringCompare( char buffer[], char key[])
-{
-    int i = 0;
-    do
-    {
-        if( buffer[i] != key[i])
-            return false;
-        i++;
-    } while( ( buffer[i] != '\0' ) && ( key[i] != '\0' ));
-
-    if( ( buffer[i] == '\0') && ( key[i] == '\0' ))  // Only if both arrays end at the same index
-        return true;
-    else
-        return false;
-}
-
-void stringCopy( char dest[], char buffer[])  // copy from buffer array to destination array
-{
-    int i = 0;  // to index the arrays
-    while( buffer[i] != '\0')  // as long as the content is not a null character
-    {
-        dest[i] = buffer[i];
-        i++;
-    };  
-    dest[i] = '\0';  // add null character manually to set the end of destination array
-}
-
-
+#include "myString.h"
 #include "transac.h"
+#include "user.h"
 
-#define NAME_SIZE 30
-#define EMAIL_SIZE 41
-#define PASSWORD_SIZE 30
-
-typedef struct{
-    int id;
-    char name[NAME_SIZE];
-    char email[EMAIL_SIZE];
-    char password[PASSWORD_SIZE];
-    int ASMpts;
-    char transacMsg[30];  // this size can be variable so no constant for this
-    Transac transac[MAX_TRANSACTION]; 
-}User;
-
-void createAdminAcc();
 void signInPage();
 void registration();
-void deleteUser( int id);  // id needed to know if the user is deleting its own or not
 void searchUser();
-User * getUser(int id);
-int findMaxId( User * user, int totalUser);
+void deleteUser( int id);  // id needed to know if the user is deleting its own or not
 
 // Menu
 void startMenu();
@@ -72,13 +27,13 @@ void changePasswd( int id);
 void login( int id);
 void logout( int id);
 
+void createAdminAcc();
 void readUserFromFile();
 void writeUserToFile();
 
 bool isStrongPasswd( char []);
 bool isValidEmail( char email_to_Valid[]);
 bool isEmailTaken( char email_to_valid[]);
-bool isUserExisting( int id);
 
 void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
@@ -89,8 +44,6 @@ char special[] = { '\"', '\'', '~',  '`', '@', '#', '$', '%', '^', '&',
                     '.',  '?', '/', '\\', '|', '[', ']', '{', '}'};
 const char * filePath = "../data/db.bin";  // relative file path to binary file
 FILE * fptr;
-User * user;
-int totalUser = 0;
 
 // Transac * transac = NULL;  // initialise indefinite transaction events 
 int * onlineUserID;  // to store the id of online user (needs concurrency control)
@@ -224,14 +177,29 @@ void registration()
     printf("Your account has been successfully created!\n");
 }
 
-int findMaxId( User * user, int totalUser) 
+void createAdminAcc()
 {
-    int maxId = -1;
-    // 2 must be the maxId when there is no user created
-    for( int i = 2; i < totalUser; i++) 
-        if( user[i].id > maxId) 
-            maxId = user[i].id;
-    return maxId;
+    char name[5];  // sizes specifically customised for admins
+    char email[15];  //    ||
+    char password[6];  //    ||
+    int ASMpts; 
+
+    totalUser = 3;  
+    user = (User*) realloc( user, sizeof(User) * 3);
+
+    for( int i = 0; i < 3; i++)
+    {
+        sprintf( name, "adm%d", i+1);
+        sprintf( email, "adm%d@gmail.com", i+1);
+        sprintf( password, "Adm#%d", i+1);
+
+        user[i].id = i + 1;  // id starts from 1
+        stringCopy( user[i].name, name);
+        stringCopy( user[i].email, email);
+        stringCopy( user[i].password, password);
+        user[i].ASMpts = 0;
+        stringCopy( user[i].transacMsg, "-");
+    }
 }
 
 void readUserFromFile()
@@ -292,7 +260,21 @@ void writeUserToFile()
     exit(EXIT_FAILURE);
 }
 
-void deleteUser( int userId)
+void searchUser()
+{
+    int id;
+    printf("\nEnter the id number you want to search : ");
+    scanf( "%d", &id);
+    if( !isUserExisting(id))
+    {
+        printf("The user doesn't exist!\n");
+        return ;
+    }
+    showProfile( id);
+    return ;
+}
+
+void deleteUser( int id)
 {   
     int deleteId;
     bool isThereUser = false;
@@ -348,31 +330,7 @@ void deleteUser( int userId)
 
     writeUserToFile();
     printf("Account deleted successfully!\n");
-    startMenu();
-}
-
-void searchUser()
-{
-    int id;
-    printf("\nEnter the id number you want to search : ");
-    scanf( "%d", &id);
-    if( !isUserExisting(id))
-    {
-        printf("The user doesn't exist!\n");
-        return ;
-    }
-    showProfile( id);
     return ;
-}
-
-User * getUser(int id)
-{
-    for( int i = 0; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-            return &user[i];
-    }
-    return NULL;
 }
 
 void startMenu()
@@ -467,7 +425,7 @@ void adminMenu( int id)
             adminMenu( id);
             break;
         case 2:
-            deleteUser(id);
+            deleteUser( id);
             adminMenu(id);
             break;
         case 3:
@@ -574,7 +532,7 @@ void changePasswd( int id)
     old_passwd_ask:
     printf("Enter the old password : ");
     scanf(" %29[^'\n']", &passwdBuffer);
-    if( stringCompare( passwdBuffer, getUser(id) -> password) == false)
+    if( stringCompare( passwdBuffer, getUser( id) -> password) == false)
     {    
         printf("Old password invalid!\n");
         goto old_passwd_ask;
@@ -613,7 +571,7 @@ void showProfile( int id)
 
 void showTransaction( int id)
 {
-    User * tempUser = getUser(id);
+    User * tempUser =  getUser(id);
     int i = 0;
     while( tempUser -> transac[i].from != 0 && i < MAX_TRANSACTION)
     {
@@ -751,16 +709,6 @@ bool isEmailTaken( char email_to_valid[])
     return false;
 }
 
-bool isUserExisting( int id)
-{
-    for( int i = 0; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-            return true;  // immediate return
-    }
-    return false;
-}
-
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
@@ -833,38 +781,13 @@ void ptsGive( int giveId, int receiveId, int pts)  // both id and pts must hvae 
     return ;
 }
 
-void createAdminAcc()
-{
-    char name[5];  // sizes specifically customised for admins
-    char email[15];  //    ||
-    char password[6];  //    ||
-    int ASMpts; 
-
-    totalUser = 3;  
-    user = (User*) realloc( user, sizeof(User) * 3);
-
-    for( int i = 0; i < 3; i++)
-    {
-        sprintf( name, "adm%d", i+1);
-        sprintf( email, "adm%d@gmail.com", i+1);
-        sprintf( password, "Adm#%d", i+1);
-
-        user[i].id = i + 1;  // id starts from 1
-        stringCopy( user[i].name, name);
-        stringCopy( user[i].email, email);
-        stringCopy( user[i].password, password);
-        user[i].ASMpts = 0;
-        stringCopy( user[i].transacMsg, "-");
-    }
-}
-
 void doExit()  
 {
     // program may crash upon failing the following functions again and again
     putchar('\n');
     writeUserToFile();
     free(user);
-    printf("Exiting the program.\n");
+    printf("Exiting the program.\n\n");
     exit(0);
 }
 

@@ -97,7 +97,8 @@
 			"sourceIndexes" : 
 			[
 				1,
-				2
+				2,
+				3
 			]
 		}
 	],
@@ -117,6 +118,11 @@
 		{
 			"backtrace" : 1,
 			"path" : "source/transac.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "source/user.h",
 			"sourceGroupIndex" : 1
 		}
 	],

@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "stdbool.h": "c",
-        "transac.h": "c"
+        "transac.h": "c",
+        "string.h": "c",
+        "mystring.h": "c"
     }
 }

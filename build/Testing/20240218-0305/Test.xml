@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="Win32-ninja"
+	BuildStamp="20240218-0305-Experimental"
+	Name="DESKTOP-91KIV0T"
+	Generator="ctest-3.28.1"
+	CompilerName="C:/mingw64/bin/g++.exe"
+	CompilerVersion=""
+	OSName="Windows"
+	Hostname="DESKTOP-91KIV0T"
+	OSRelease=" Professional"
+	OSVersion=" (Build 19045)"
+	OSPlatform="AMD64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="14"
+	ProcessorCacheSize="-1"
+	NumberOfLogicalCPU="4"
+	NumberOfPhysicalCPU="2"
+	TotalVirtualMemory="10498"
+	TotalPhysicalMemory="8066"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="2712"
+	>
+	<Testing>
+		<StartDateTime>Feb 18 23:07 Myanmar Standard Time</StartDateTime>
+		<StartTestTime>1708274274</StartTestTime>
+		<TestList/>
+		<EndDateTime>Feb 18 23:07 Myanmar Standard Time</EndDateTime>
+		<EndTestTime>1708274274</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

@@ -112,7 +112,7 @@
 		},
 		{
 			"backtrace" : 1,
-			"path" : "source/myString.h",
+			"path" : "source/myStringUtil.h",
 			"sourceGroupIndex" : 1
 		},
 		{

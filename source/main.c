@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "myString.h"
+#include "myStringUtil.h"
 #include "user.h"
 
-void signInPage();
+void signIn();
 void registration();
 void searchUser();
 void deleteUser( int id);  // id needed to know if the user is deleting its own or not
@@ -19,28 +19,16 @@ void adminMenu( int id);
 void doExit();
 void showTransacHistory( int id);
 void changeMenu( int id);
-void changeName( int id);
-void changeEmail( int id);
-void changePhone( int id);
-void changePasswd( int id);
 void login( int id);
 void logout( int id);
 
-void createAdminAcc();
+void createDefaultAcc();
 void readUserFromFile();
 void writeUserToFile();
-
-bool isStrongPasswd( char []);
-bool isValidEmail( char email_to_Valid[]);
-bool isValidPh( char phone_to_valid[13]);
 
 void ptsProcess( int giveId);
 void ptsGive( int giveId, int receiveId, int pts);
 
-// selective special character set
-char special[] = { '\"', '\'', '~',  '`', '@', '#', '$', '%', '^', '&', 
-                    '*',  '(', ')',  '-', '_', '+', '=', '<', '>', ',', 
-                    '.',  '?', '/', '\\', '|', '[', ']', '{', '}'};
 const char * filePath = "../data/db.bin";  // relative file path to binary file
 FILE * fptr;
 
@@ -53,15 +41,17 @@ int main()
     readUserFromFile();
 
     if( totalUser == 0)  // data file is empty
-        createAdminAcc();
-
+    {
+        createDefaultAcc();
+        writeUserToFile();
+    }
     while(true)
     {
         startMenu();
     }
 }
 
-void signInPage()
+void signIn()
 {
     char mailBuffer[EMAIL_SIZE];  // to store mail temporarily during input process
     char passwdBuffer[PASSWORD_SIZE];  // to store password temporarily during input process
@@ -82,6 +72,11 @@ void signInPage()
             
             if( stringCompare( passwdBuffer, user[i].password) == true)
             {
+                if( user[i].isSuspended)
+                {
+                    printf("\nSorry! Your account has been suspended!\n");
+                    startMenu();
+                }
                 login(id); 
                 if( id >= 1 && id <= 3)
                     adminMenu(id);
@@ -161,6 +156,7 @@ void registration()
     user[totalUser-1].ASMpts = asmPtsBuffer;
 // replace "\0" with "-\0" to show more readable format 
     stringCopy( user[totalUser-1].transacMsg, "-");  
+    user[totalUser-1].isSuspended = false;
 // initialise the memory with zero so I can check with certain conditions
     memset( user[totalUser-1].transac, 0x00, sizeof(Transac) * MAX_TRANSACTION);
 
@@ -181,29 +177,45 @@ void registration()
     printf("Your account has been successfully created!\n");
 }
 
-void createAdminAcc()
+void createDefaultAcc()
 {
+/* 
+    4 default accounts will be created
+    owner or master acc has 0 id
+    the rest are admin accounts
+*/
     char name[5];  // sizes specifically customised for admins
     char email[15];  //    ||
     char password[6];  //    ||
     int ASMpts; 
 
-    totalUser = 3;  
-    user = (User*) realloc( user, sizeof(User) * 3);
+    totalUser = 4;
+    user = (User*) realloc( user, sizeof(User) * 4);
 
-    for( int i = 0; i < 3; i++)
+//  Master account creation
+    user[0].id = 0;
+    stringCopy( user[0].name, "name");
+    stringCopy( user[0].email, "email");
+    stringCopy( user[0].phone, "-");
+    stringCopy( user[0].password, "past+World");
+    user[0].ASMpts = 0;
+    stringCopy( user[0].transacMsg, "-");
+    user[0].isSuspended = false;
+
+    for( int i = 1; i <= 3; i++)
     {
-        sprintf( name, "adm%d", i+1);
-        sprintf( email, "adm%d@gmail.com", i+1);
-        sprintf( password, "Adm#%d", i+1);
+        sprintf( name, "adm%d", i);
+        sprintf( email, "adm%d@gmail.com", i);
+        sprintf( password, "Adm#%d", i);
 
-        user[i].id = i + 1;  // id starts from 1
+        user[i].id = i;  // id starts from 1
         stringCopy( user[i].name, name);
         stringCopy( user[i].email, email);
         stringCopy( user[i].phone, "-");
         stringCopy( user[i].password, password);
         user[i].ASMpts = 0;
         stringCopy( user[i].transacMsg, "-");
+        user[i].isSuspended = false;
     }
     writeUserToFile();
 }
@@ -268,7 +280,8 @@ void writeUserToFile()
 
 void searchUser()
 {
-    int id;
+    int id, actionToTake;
+    bool * status;
     printf("\nEnter the id number you want to search : ");
     scanf( "%d", &id);
     if( !isUserExisting(id))
@@ -276,30 +289,38 @@ void searchUser()
         printf("The user doesn't exist!\n");
         return ;
     }
+    status = &( getUser(id) -> isSuspended);  // hold the isSuspended field
     showUserInfo( id);
+    printf("Account status  : %s\n", *status ? "Suspended" : "Un-suspneded");
+    putchar('\n');
+    if( id > 4 )  /// exclude the default accounts
+    {
+        *status ? printf("1. Unsuspend User\n"): printf("1. Suspend User\n"); 
+        printf("2. Delete User\n");
+        printf("3. Back\n");
+        scanf( "%d", &actionToTake);
+        switch(actionToTake)
+        {
+            case 1:
+                if( !status)
+                    logout(id);
+                *status = !*status;  // change the suspend status
+                break;  
+            case 2:
+                deleteUser(id);
+                break;
+            case 3:
+                return ;
+                break;  // this line is not necessary but to look proper way
+            default:
+                break;
+        };
+    }
     return ;
 }
 
-void deleteUser( int id)
+void deleteUser( int deleteId)
 {   
-    int deleteId;
-
-    askDeleteId:
-    printf("\nEnter the id of the user to delete : ");
-    scanf( "%d", &deleteId);
-
-    if( deleteId >= 1 && deleteId <= 3 )
-    {
-        printf( "Sorry, the id is not avaialable to delete.\n");
-        goto askDeleteId;
-    }
-
-    if( isUserExisting( deleteId) == false)
-    {
-        printf("Error! There is no user with such id.");
-        return ;
-    }
-
 /*
     remove the deleteId from onlineUserID 
     but if the deleteId is online now, he can still be using it for the time being
@@ -346,7 +367,7 @@ void startMenu()
     switch(_command)
     {
         case 1:
-            signInPage();
+            signIn();
             break;
         case 2:
             registration();
@@ -413,10 +434,9 @@ void adminMenu( int id)
     int _command = 0; // to get the app in menu decision
     putchar('\n');
     printf("1. Profile\n");
-    printf("2. Delete User\n");
-    printf("3. Search User\n");
-    printf("4. Log Out\n");
-    printf("5. Log Out & Exit\n");
+    printf("2. Search User\n");
+    printf("3. Log Out\n");
+    printf("4. Log Out & Exit\n");
     scanf("%d", &_command);
 
     switch(_command)
@@ -426,18 +446,14 @@ void adminMenu( int id)
             adminMenu( id);
             break;
         case 2:
-            deleteUser( id);
-            adminMenu(id);
-            break;
-        case 3:
             searchUser(id);
             adminMenu(id);
             break;
-        case 4:
+        case 3:
             logout(id);
             startMenu();
             break;
-        case 5:
+        case 4:
             logout(id);
             doExit(0);
             break;
@@ -474,129 +490,6 @@ void changeMenu( int id)
         default:
             printf("Other options are not supported!\n");
             break;
-    }
-}
-
-void changeName( int id)
-{
-    char name[NAME_SIZE];
-    // I don't know when will the input end so initialise it with all 0 using memset
-    memset( name, 0, sizeof(name));
-    putchar('\n');  // to make more readable CLI
-    printf("Enter new name :");
-    scanf(" %29[^\n]", &name);  // accept up to only 29 because 30 in the struct minus \0
-      // to bypass '\n' char
-    for( int i = 3; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-        {
-            stringCopy( user[i].name, name);
-            printf("Name successfully changed!\n");
-            break; 
-        }
-    }
-}
-
-void changeEmail( int id)
-{
-    char emailBuffer[EMAIL_SIZE];
-    // I don't know when will the input end so initialise it with all 0 using memset
-    memset( emailBuffer, 0x00, sizeof(emailBuffer));
-    putchar('\n');  // to make more readable CLI
-
-    email_ask:  // local branch
-    printf("Enter new email :");
-    scanf(" %40[^\n]", &emailBuffer);  // accept up to only 40 because 41 in the struct minus \0
-      // to bypass '\n' char
-    if(!isValidEmail( emailBuffer))
-    {
-        printf("Error! Invalid email entered.\n");
-        goto email_ask;
-    }
-    else if( isEmailTaken( emailBuffer))  
-    {
-        printf("Error! The email is connected to another account.\n");
-        goto email_ask;
-    }
-
-    for( int i = 3; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-        {
-            stringCopy( user[i].email, emailBuffer);
-            printf("Email successfully changed!\n");
-            break; 
-        }
-    }
-}
-
-void changePhone( int id)
-{
-    char phBuffer[15];
-    // initialise for storing data safely
-    memset( phBuffer, 0x00, sizeof(phBuffer));
-    putchar('\n');  // to make more readable CLI
-
-    phone_ask:  // local branch
-    printf("Enter new phone number (xx-xxx xxx xxx):");
-    scanf(" %14[^\n]", &phBuffer);  // accept up to only 40 because 41 in the struct minus \0
-      // to bypass '\n' char
-    if(!isValidPh( phBuffer))
-    {
-        printf("Error! Invalid phone number entered.\n");
-        goto phone_ask;
-    }
-    else if( isPhoneTaken( phBuffer))  
-    {
-        printf("Error! The phone number is connected to another account.\n");
-        goto phone_ask;
-    }
-
-    for( int i = 3; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-        {
-            stringCopy( user[i].phone, phBuffer);
-            printf("Phone number successfully changed!\n");
-            break; 
-        }
-    }
-    return ;
-}
-
-void changePasswd( int id)
-{
-    char passwdBuffer[PASSWORD_SIZE];
-    memset( passwdBuffer, 0x00, sizeof(passwdBuffer));
-    putchar('\n');
-
-    old_passwd_ask:
-    printf("Enter the old password : ");
-    scanf(" %29[^\n]", &passwdBuffer);
-      // to bypass '\n' char
-    if( stringCompare( passwdBuffer, getUser( id) -> password) == false)
-    {    
-        printf("Old password invalid!\n");
-        goto old_passwd_ask;
-    }
-
-    passwd_ask:
-    printf("\nEnter new password : ");
-    scanf(" %29[^\n]", &passwdBuffer);
-    if( !isStrongPasswd( passwdBuffer))
-    {
-        printf("Error! The password is not strong enough!\n");
-        goto passwd_ask;
-    }
-
-    for( int i = 3; i < totalUser; i++)
-    {
-        if( user[i].id == id)
-        {
-            stringCopy( user[i].password, passwdBuffer);
-            printf("Password successfully changed!\n");
-            break; 
-        }
     }
 }
 
@@ -658,98 +551,6 @@ void logout( int logoutId)
     return ;
 }
 
-bool isStrongPasswd( char passwd[])
-{
-    bool small_flg = false, cap_flg = false, num_flg = false, 
-            spec_flg = false, size_flg = false;
-    for( int i = 0; passwd[i] != '\0'; i++)
-    {
-        if( ( passwd[i] >= 0x61 ) && ( passwd[i] <= 0x7A))  // a-z
-            small_flg = true;
-        else if( ( passwd[i] >= 0x41 ) && ( passwd[i] <= 0x5A))  // A-Z
-            cap_flg = true;
-        else if( ( passwd[i] >= 0x30 ) && ( passwd[i] <= 0x39))  // 0-9
-            num_flg = true;  
-        else
-        {
-            for( int j = 0; j < sizeof(special); j++)
-            {
-                if( passwd[i] == special[j])  // check if the special char is from the predefined array
-                    spec_flg = true; 
-            }   
-            if( spec_flg == false)
-                // the password contains special chars which are not allowed or unknown char
-                return false;  
-        }
-        if( i >= 6)
-            size_flg = true;
-    }
-    if( ( small_flg == true) && ( cap_flg == true) && ( num_flg == true)\
-            && (spec_flg == true) && ( size_flg == true))
-        return true;
-    else 
-        return false;
-}
-
-bool isValidEmail( char email_to_valid[])
-{
-    bool dot_flag = false;
-    char part1[20], part2[20];
-    int i = 0;
-
-    // 1st char can't be a number
-    if( ( email_to_valid[0] >= 0x30) && ( email_to_valid[0] <= 0x39))
-        return false;
-
-    while( email_to_valid[i] != '@')
-    {
-        if( ( ( email_to_valid[i] >= 0x30 ) && ( email_to_valid[i] <= 0x39))  // 0-9
-            || (( email_to_valid[i] >= 0x61 ) && ( email_to_valid[i] <= 0x7A))  // a-z
-            || ( email_to_valid[i] == '.'))  // . is allowed
-            part1[i] = email_to_valid[i];
-        else if( email_to_valid[i] == '\0')  // part2 missing;
-            return false;
-        i++;
-    }
-    i++; // agian to skip the '@' character ONCE
-    int j = 0;  // part2 needs a new index starting from 0
-    while( email_to_valid[i] != '\0')
-    {
-        if( ( ( email_to_valid[i] >= 0x30 ) && ( email_to_valid[i] <= 0x39))  // 0-9
-            || (( email_to_valid[i] >= 0x61 ) && ( email_to_valid[i] <= 0x7A)))  // a-z
-            part2[j] = email_to_valid[i];
-        else if( email_to_valid[i] == '.')
-        {
-            part2[j] = email_to_valid[i];
-            dot_flag = true;
-        }
-        else
-            return false;
-        i++;
-        j++;  // to append next index
-    }
-    /*
-        dot flag is the actual result because
-        if the program counter reaches this line, it means
-        all the conditions has been satisfied and 
-        the correct email is given
-            
-            but
-
-        Can not simply return TRUE because
-        whether part2 has the dot or not is yet unknown
-    */
-    return dot_flag;
-}
-
-bool isValidPh( char phone_to_valid[13])
-{
-    if( phone_to_valid[0] == '0' && phone_to_valid[1] == '9')
-        return true;
-    else
-        return false;
-}
-
 void ptsProcess( int giveId)
 {
     int receiveId, pts = 0;
@@ -794,8 +595,14 @@ void ptsProcess( int giveId)
         return ;
     }
 
-    ptsGive( giveId, receiveId, pts);
-    
+    if( pts >= 20)
+    {
+        int charge = ( pts * 5) /100;  // 5% service charge
+        ptsGive( giveId, receiveId, pts-charge);
+        ptsGive( giveId, 0, charge);  // give the service fee to owner account
+    }
+    else  // FoC for transfer under 20 points
+        ptsGive( giveId, receiveId, pts);
     writeUserToFile();
 
     printf("You have given %d ASM pts to user %d successfully!\n", pts, receiveId);

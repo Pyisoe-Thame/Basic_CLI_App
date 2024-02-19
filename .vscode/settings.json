@@ -3,6 +3,7 @@
         "stdbool.h": "c",
         "transac.h": "c",
         "string.h": "c",
-        "mystring.h": "c"
+        "mystring.h": "c",
+        "stdint.h": "c"
     }
 }

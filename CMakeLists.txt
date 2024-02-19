@@ -12,7 +12,7 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/source)
 # Add the source files to the project
 add_executable(ASSIGNMENT 
     ${SOURCE_DIR}/main.c 
-    ${SOURCE_DIR}/myString.h 
+    ${SOURCE_DIR}/myStringUtil.h 
     ${SOURCE_DIR}/transac.h
     ${SOURCE_DIR}/user.h
 )

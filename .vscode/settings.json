@@ -4,6 +4,7 @@
         "transac.h": "c",
         "string.h": "c",
         "mystring.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "stdlib.h": "c"
     }
 }

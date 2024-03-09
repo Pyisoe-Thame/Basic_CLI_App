@@ -1,4 +1,4 @@
-./build
-./.vscode
-./CMakeFiles
+build/*
+.vscode/*
+CMakeFiles/*
 CamkeCache.txt

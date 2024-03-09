@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "myStringUtil.h"
+#include "crien.h"
 #include "user.h"
 
 void signIn();
@@ -69,7 +70,7 @@ void signIn()
             int id = user[i].id;  // i-1 no longer works; if a user deleted, id will shuffle
             printf("Enter password : ");
             scanf(" %29[^\n]", &passwdBuffer);
-            
+            plusCri( passwdBuffer, "KeyKang47al");
             if( stringCompare( passwdBuffer, user[i].password) == true)
             {
                 if( user[i].isSuspended)
@@ -152,6 +153,8 @@ void registration()
     user[totalUser-1].id = findMaxId( user, totalUser-1) + 1; 
     stringCopy( user[totalUser-1].name, nameBuffer);
     stringCopy( user[totalUser-1].email, mailBuffer);
+    stringCopy( user[totalUser-1].phone, "-");
+    plusCri( passwdBuffer, "KeyKang47al");
     stringCopy( user[totalUser-1].password, passwdBuffer);
     user[totalUser-1].ASMpts = asmPtsBuffer;
 // replace "\0" with "-\0" to show more readable format 
@@ -186,7 +189,7 @@ void createDefaultAcc()
 */
     char name[5];  // sizes specifically customised for admins
     char email[15];  //    ||
-    char password[6];  //    ||
+    char password[11];  //    ||
     int ASMpts; 
 
     totalUser = 4;
@@ -198,8 +201,14 @@ void createDefaultAcc()
     stringCopy( user[0].email, "email");
     stringCopy( user[0].phone, "-");
     stringCopy( user[0].password, "past+World");
+    plusCri( user[0].password, "KeyKang47al");
     user[0].ASMpts = 0;
     stringCopy( user[0].transacMsg, "-");
+/*
+    master account require transaction
+    initialise with 0 to ease condition check
+*/
+    memset( user[0].transac, 0x00, sizeof(user[0].transac)); 
     user[0].isSuspended = false;
 
     for( int i = 1; i <= 3; i++)
@@ -212,6 +221,7 @@ void createDefaultAcc()
         stringCopy( user[i].name, name);
         stringCopy( user[i].email, email);
         stringCopy( user[i].phone, "-");
+        plusCri( password, "KeyKang47al");
         stringCopy( user[i].password, password);
         user[i].ASMpts = 0;
         stringCopy( user[i].transacMsg, "-");
@@ -374,7 +384,7 @@ void startMenu()
             startMenu();
             break;
         case 3:
-            doExit(0);
+            doExit(EXIT_SUCCESS);
             break;
         default:
             perror("Error! Unspported input detected!\n");
@@ -455,7 +465,7 @@ void adminMenu( int id)
             break;
         case 4:
             logout(id);
-            doExit(0);
+            doExit(EXIT_SUCCESS);
             break;
         default:
             break;
@@ -587,6 +597,7 @@ void ptsProcess( int giveId)
 
     printf("Enter the password to confirm : ");
     scanf(" %[^\n]", &passwdBuffer);
+    plusCri( passwdBuffer, "KeyKang47al");
       // to bypass '\n' char
     if( !stringCompare( passwdBuffer, getUser(giveId) -> password))
     {

@@ -15,6 +15,7 @@ add_executable(ASSIGNMENT
     ${SOURCE_DIR}/myStringUtil.h 
     ${SOURCE_DIR}/transac.h
     ${SOURCE_DIR}/user.h
+    ${SOURCE_DIR}/crien.h
 )
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

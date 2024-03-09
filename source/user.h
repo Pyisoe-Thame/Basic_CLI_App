@@ -2,6 +2,7 @@
 #define USER_H
 
 #include "transac.h"
+#include "crien.h"
 
 #define NAME_SIZE 30
 #define EMAIL_SIZE 41
@@ -149,7 +150,7 @@ void changePasswd( int id)
     old_passwd_ask:
     printf("Enter the old password : ");
     scanf(" %29[^\n]", &passwdBuffer);
-      // to bypass '\n' char
+    plusCri( passwdBuffer, "KeyKang47al");
     if( stringCompare( passwdBuffer, getUser( id) -> password) == false)
     {    
         printf("Old password invalid!\n");
@@ -169,6 +170,7 @@ void changePasswd( int id)
     {
         if( user[i].id == id)
         {
+            plusCri( passwdBuffer, "KeyKang47al");
             stringCopy( user[i].password, passwdBuffer);
             printf("Password successfully changed!\n");
             break; 
@@ -205,7 +207,7 @@ bool isPhoneTaken( char phone_to_valid[])
 int findMaxId() 
 {
     int maxId = -1;
-    for( int i = 4; i < totalUser; i++)  // exclude the default accounts
+    for( int i = 3; i < totalUser; i++)  // start counting from where maxId == 3
         if( user[i].id > maxId) 
             maxId = user[i].id;
     return maxId;

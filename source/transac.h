@@ -44,7 +44,7 @@ void addTransac( Transac transac[MAX_TRANSACTION], int giveId, int receiveId, in
         transac[MAX_TRANSACTION-1].from = giveId;
         transac[MAX_TRANSACTION-1].to = receiveId;
         transac[MAX_TRANSACTION-1].amount = pts;
-        transac[i].time_info = *localtime(NULL);
+        transac[i].time_info = *localtime(&current_time);
         return ;
     }
     

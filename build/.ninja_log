@@ -1,6 +1,0 @@
-# ninja log v5
-16	276	7296274309353581	CMakeFiles/ASSIGNMENT.dir/source/main.c.obj	582247ae7ab95c57
-22	174	7296274308303767	CMakeFiles/ASSIGNMENT.dir/source/myString.c.obj	7f394714c4fd4c0d
-28	151	7296274308053909	CMakeFiles/ASSIGNMENT.dir/source/transac.c.obj	b8edec6b73684233
-276	552	7296274311002325	ASSIGNMENT.exe	70765fdf251ae9ff
-19	34	0	clean	fb443f26ba9fdf13

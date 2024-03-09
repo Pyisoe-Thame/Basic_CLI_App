@@ -38,8 +38,8 @@ CMAKE_BUILD_TYPE:STRING=Debug
 //No help, variable specified on the command line.
 CMAKE_CXX_COMPILER:FILEPATH=C:/mingw64/bin/g++.exe
 
-//No help, variable specified on the command line.
-CMAKE_C_COMPILER:FILEPATH=C:/mingw64/bin/gcc.exe
+//C compiler
+CMAKE_C_COMPILER:STRING=C:/mingw64/bin/gcc.exe
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
